@@ -1,42 +1,87 @@
-extends Node
+const WebSocket = require("ws");
+const http = require("http");
 
-var socket := WebSocketPeer.new()
+const PORT = process.env.PORT || 10000;
 
-const SERVER_URL = "wss://extreme-online-server.onrender.com"
+const server = http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end("EXTREME ONLINE SERVER");
+});
 
-@onready var player = get_parent().get_node("Player")
+const wss = new WebSocket.Server({ server });
 
-func _ready():
-	print("Connecting to server...")
+let players = {};
 
-	var err = socket.connect_to_url(SERVER_URL)
+wss.on("connection", (ws) => {
 
-	if err != OK:
-		print("Connection failed:", err)
-	else:
-		print("Connection request sent")
+    const id = Date.now().toString();
 
+    players[id] = {
+        x: 0,
+        y: 0,
+        z: 0
+    };
 
-func _process(_delta):
+    ws.send(JSON.stringify({
+        type: "id",
+        id: id
+    }));
 
-	socket.poll()
+    console.log("Player connected:", id);
 
-	if socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
+    ws.on("message", (message) => {
 
-		var data = {
-			"type": "move",
-			"x": player.global_position.x,
-			"y": player.global_position.y,
-			"z": player.global_position.z
-		}
+        try {
 
-		socket.send_text(JSON.stringify(data))
+            const data = JSON.parse(message);
 
-		if Engine.get_process_frames() % 60 == 0:
-			print("Sent Position:", player.global_position)
+            if (data.type === "move") {
 
-		while socket.get_available_packet_count():
+                players[id].x = data.x;
+                players[id].y = data.y;
+                players[id].z = data.z;
 
-			var message = socket.get_packet().get_string_from_utf8()
+                console.log(
+                    id,
+                    data.x,
+                    data.y,
+                    data.z
+                );
+            }
 
-			print("Received:", message)
+        } catch (err) {
+            console.log(err);
+        }
+
+    });
+
+    ws.on("close", () => {
+
+        delete players[id];
+
+        console.log("Player disconnected:", id);
+
+    });
+
+});
+
+setInterval(() => {
+
+    const packet = JSON.stringify({
+        type: "players",
+        players: players
+    });
+
+    wss.clients.forEach(client => {
+
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(packet);
+        }
+
+    });
+
+}, 100);
+
+server.listen(PORT, "0.0.0.0", () => {
+    console.log("Server running on port", PORT);
+});
