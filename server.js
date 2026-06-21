@@ -19,7 +19,8 @@ wss.on("connection", (ws) => {
     players[id] = {
         x: 0,
         y: 0,
-        z: 0
+        z: 0,
+        rot_y: 0
     };
 
     ws.send(JSON.stringify({
@@ -40,6 +41,7 @@ wss.on("connection", (ws) => {
                 players[id].x = data.x;
                 players[id].y = data.y;
                 players[id].z = data.z;
+                players[id].rot_y = data.rot_y;
 
                 console.log(
                     id,
