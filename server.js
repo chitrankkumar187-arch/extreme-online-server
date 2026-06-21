@@ -41,9 +41,15 @@ wss.on("connection", (ws) => {
                 players[id].y = data.y;
                 players[id].z = data.z;
 
+                console.log(
+                    id,
+                    data.x.toFixed(2),
+                    data.y.toFixed(2),
+                    data.z.toFixed(2)
+                );
             }
 
-        } catch(err) {
+        } catch (err) {
             console.log(err);
         }
 
